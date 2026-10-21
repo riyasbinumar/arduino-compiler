@@ -15,8 +15,9 @@ app.post('/compile', (req, res) => {
     return res.status(400).json({ success: false, error: 'No code provided' });
   }
 
-  const sketchDir = `/tmp/sketch_${Date.now()}`;
-  const sketchFile = path.join(sketchDir, 'sketch.ino');
+  const sketchName = `sketch_${Date.now()}`;
+  const sketchDir = `/tmp/${sketchName}`;
+  const sketchFile = path.join(sketchDir, `${sketchName}.ino`);
 
   try {
     fs.mkdirSync(sketchDir, { recursive: true });
@@ -31,9 +32,19 @@ app.post('/compile', (req, res) => {
           });
         }
 
-        const hexPath = path.join(sketchDir, 'build', 'sketch.ino.hex');
-        
-        if (fs.existsSync(hexPath)) {
+        // Look for the hex file
+        const buildDir = path.join(sketchDir, 'build');
+        let hexPath = null;
+
+        try {
+          const files = fs.readdirSync(buildDir);
+          const hexFile = files.find(f => f.endsWith('.hex'));
+          if (hexFile) {
+            hexPath = path.join(buildDir, hexFile);
+          }
+        } catch (e) {}
+
+        if (hexPath && fs.existsSync(hexPath)) {
           const hex = fs.readFileSync(hexPath, 'base64');
           res.json({ success: true, hex });
         } else {
